@@ -401,7 +401,26 @@ describe("Engine", () => {
       p1 burn 1
       p1 burn 1
       p1 burn 1
-      p1 action poweraction7
+      p1 action power7
+    `);
+ 
+    expect(() => new Engine(moves)).to.not.throw();
+  });
+
+  it.only("should allow freeactions before and after a move", () => {
+    const moves = parseMoves(`
+      init 2 randomSeed
+      p1 faction terrans
+      p2 faction ambas
+      p1 build m 2x2
+      p2 build m -6x2
+      p2 build m 3x-4
+      p1 build m 4x-6
+      p2 booster booster2
+      p1 booster booster7
+      p1 burn1
+      p1 build ts 4x-6
+      p1 burn1
     `);
  
     expect(() => new Engine(moves)).to.not.throw();

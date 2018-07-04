@@ -30,7 +30,7 @@ import AvailableCommand, {
   generate as generateAvailableCommands
 } from './available-command';
 import Reward from './reward';
-import { boardActions } from './actions';
+import { boardActions, freeActions } from './actions';
 
 
 const ISOLATED_DISTANCE = 3;
@@ -370,7 +370,14 @@ export default class Engine {
       player: player,
       data: fromCommand === Command.Action ? playerTiles : possibleTiles
     });
+  }
 
+  endTurnPhase(player: PlayerEnum, fromCommand: Command){
+    this.roundSubCommands.unshift({
+      name: Command.EndTurn,
+      player: player,
+      data: fromCommand
+    });
   }
 
   possibleResearchAreas(player: PlayerEnum, cost: string, destResearchArea?: ResearchField) {
@@ -439,7 +446,53 @@ export default class Engine {
   }
 
   possibleBoardActions(player: PlayerEnum) {
-    return  Object.values(BoardAction).filter(pwract => this.boardActions[pwract] && this.player(player).canPay(Reward.parse(boardActions[pwract].cost)));
+    const commands = [];
+
+    let poweracts = Object.values(BoardAction).filter(pwract => this.boardActions[pwract] && this.player(player).canPay(Reward.parse(boardActions[pwract].cost)));
+    if (poweracts.length > 0) {
+      commands.push({
+        name: Command.Action,
+        player,
+        data: { poweracts }
+      });
+    };
+
+    return commands;
+
+  }
+
+  possibleFreeActions(player: PlayerEnum) {
+
+    // free action - spend
+    const acts = [];
+    const commands = [];
+    for (let i = 0; i < freeActions.length; i++) {
+      if (this.player(player).canPay(Reward.parse(freeActions[i].cost))) {
+        acts.push({ 
+          cost: freeActions[i].cost,
+          income: freeActions[i].income  
+        });
+      };
+    };
+
+    if (acts.length > 0) {
+      commands.push({
+        name: Command.Spend,
+        player,
+        data: { acts }
+      });
+    }
+
+    //free action - burn
+    //TODO generate burn actions based on  Math.ceil( engine.player(player).data.power.area2 / 2)
+    if (this.player(player).data.power.area2 >= 2) {
+      commands.push({
+        name: Command.BurnPower,
+        player,
+        data: 1
+      });
+    }
+    return commands;
 
   }
 
@@ -567,6 +620,8 @@ export default class Engine {
         if ( building === Building.ResearchLab || building === Building.Academy1 || building === Building.Academy2) {
           this.techTilePhase(player);
         }
+
+        this.endTurnPhase(player, Command.Build);
        
         return;
       }
@@ -616,6 +671,10 @@ export default class Engine {
   }
 
   [Command.DeclineLeech](player: PlayerEnum) {
+  }
+
+  [Command.EndTurn](player: PlayerEnum){
+
   }
 
   [Command.ChooseTechTile](player: PlayerEnum, pos: TechTilePos) {
